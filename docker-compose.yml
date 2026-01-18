@@ -4,7 +4,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: velea_backend
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
@@ -15,18 +14,25 @@ services:
     restart: always
     expose:
       - "8000"
+    networks:
+      - dokploy-network
 
   frontend:
     build:
       context: ./frontend
       args:
         - VITE_API_URL=${VITE_API_URL}
-    container_name: velea_frontend
     restart: always
     expose:
       - "80"
     depends_on:
       - backend
+    networks:
+      - dokploy-network
 
 volumes:
   velea_data:
+
+networks:
+  dokploy-network:
+    external: false
