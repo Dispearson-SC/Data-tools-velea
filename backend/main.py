@@ -17,6 +17,9 @@ app = FastAPI(title="Velea Limpieza API")
 origins = [
     "http://localhost:5173", # Vite Frontend
     "http://localhost:3000",
+    "https://velea.farone.cloud", # Production Domain
+    "https://app.farone.cloud",   # Alternative Production Domain
+    "https://farone.cloud",       # Root Domain
 ]
 
 app.add_middleware(
