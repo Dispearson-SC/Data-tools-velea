@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: velea_backend
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - USERS_FILE_PATH=/app/data/users.json
+    volumes:
+      - velea_data:/app/data
+    restart: always
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: velea_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  velea_data:
