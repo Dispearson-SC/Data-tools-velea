@@ -8,3 +8,4 @@ openpyxl
 resend
 python-dotenv
 email-validator
+bcrypt
