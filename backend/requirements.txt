@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+pandas
+openpyxl
+resend
+python-dotenv
