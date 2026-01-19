@@ -66,24 +66,24 @@ def load_users():
     
     # Ensure admin always exists if DB is empty or corrupt
     admin_username = "gerardoj.suastegui"
-    # Try multiple env var names in case of injection issues
-    admin_pass = os.getenv("VELEA_ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or "admin123"
+    # Hardcoded secure hash for 'Uranio6Polonio+' because env var injection is failing in Dockploy
+    # Generated with bcrypt cost 12
+    secure_admin_hash = "$2b$12$kuJhCKnPDki9Y3ZjulqckOCw.IBJ755yKYtBoIczbCuPnDA5aOrAm"
     
     if admin_username not in users_db:
         # Create new admin
         users_db[admin_username] = {
             "username": admin_username,
             "email": "gerardoj.suastegui@velea.com",
-            "hashed_password": pwd_context.hash(admin_pass),
+            "hashed_password": secure_admin_hash,
             "disabled": False,
             "is_admin": True
         }
         save_users()
     else:
-        # FORCE UPDATE ADMIN PASSWORD FROM ENV
-        # This ensures the password is always what is set in Dockploy env vars
-        print("Forcing admin password update from environment variable...")
-        users_db[admin_username]["hashed_password"] = pwd_context.hash(admin_pass)
+        # FORCE UPDATE ADMIN PASSWORD TO SECURE HASH
+        print("Forcing admin password update to secure hardcoded hash...")
+        users_db[admin_username]["hashed_password"] = secure_admin_hash
         users_db[admin_username]["is_admin"] = True
         users_db[admin_username]["disabled"] = False
         save_users()
