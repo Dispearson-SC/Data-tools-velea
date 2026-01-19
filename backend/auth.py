@@ -167,13 +167,25 @@ router = APIRouter()
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    print(f"Login attempt for user: {form_data.username}")
     user = get_user(users_db, form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user:
+        print(f"User not found: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    if not verify_password(form_data.password, user.hashed_password):
+        print(f"Invalid password for user: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    print(f"Login successful for user: {form_data.username}")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     # Use username as sub
     access_token = create_access_token(

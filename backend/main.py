@@ -23,13 +23,7 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 # CORS
-origins = [
-    "http://localhost:5173", # Vite Frontend
-    "http://localhost:3000",
-    "https://velea.farone.cloud", # Production Domain
-    "https://app.farone.cloud",   # Alternative Production Domain
-    "https://farone.cloud",       # Root Domain
-]
+origins = ["*"] # Temporarily allow all for debugging
 
 app.add_middleware(
     CORSMiddleware,
