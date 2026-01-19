@@ -2,9 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const api = axios.create({
-  // Use '/api' relative path to leverage Nginx proxy in production
-  // Fallback to localhost for local dev if not proxied
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  // Priority: 1. Env Var, 2. Hardcoded Production Backend, 3. Localhost
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.farone.cloud',
 });
 
 api.interceptors.request.use((config) => {
