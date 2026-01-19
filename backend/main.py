@@ -7,6 +7,11 @@ import os
 import shutil
 import pandas as pd
 from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load env vars from .env file if present (overrides/supplements system envs)
+load_dotenv()
+
 from auth import router as auth_router, get_current_active_user, users_db, save_users
 from services.sales_cleaner import process_sales_clean, extract_df_and_sucursal
 from services.analysis_cleaner import procesar_analisis
@@ -40,7 +45,14 @@ app.include_router(auth_router)
 async def debug_env():
     # SECURITY WARNING: This endpoint exposes sensitive env vars.
     # ONLY for debugging connection issues. Remove after fix.
+    
+    # Get all environment keys to check for typos or prefixing issues
+    all_keys = list(os.environ.keys())
+    # Filter only relevant ones or suspicious ones
+    relevant_keys = [k for k in all_keys if "ADMIN" in k or "PASS" in k or "SECRET" in k or "API" in k]
+    
     return {
+        "ALL_KEYS_DETECTED": relevant_keys,
         "SECRET_KEY_SET": bool(os.getenv("SECRET_KEY")),
         "RESEND_API_KEY_SET": bool(os.getenv("RESEND_API_KEY")),
         "ADMIN_PASSWORD_SET": bool(os.getenv("ADMIN_PASSWORD")),
