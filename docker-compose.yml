@@ -4,8 +4,10 @@ services:
   backend:
     build: ./backend
     container_name: velea-backend
-    ports:
-      - "8000:8000"
+    # Ports removed for Dockploy internal routing
+    # Expose only internally if needed, or let Dockploy handle it via network
+    expose:
+      - "8000"
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/users.json:/app/users.json
@@ -18,8 +20,9 @@ services:
   frontend:
     build: ./frontend
     container_name: velea-frontend
-    ports:
-      - "80:80"
+    # Ports removed to avoid conflict with Dockploy's proxy (Traefik) on port 80
+    expose:
+      - "80"
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     depends_on:
