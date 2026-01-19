@@ -9,6 +9,7 @@ import Breakdown from './pages/tools/Breakdown';
 import AdminUsers from './pages/settings/AdminUsers';
 import { useAuthStore } from './store/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SessionTimeout } from './components/SessionTimeout';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

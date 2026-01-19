@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Upload, Filter, Table, Pin } from 'lucide-react';
+import { Upload, Filter, Table, Pin, Download } from 'lucide-react';
 import api from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
@@ -121,9 +121,17 @@ export default function Breakdown() {
           document.body.appendChild(link);
           link.click();
           link.parentNode?.removeChild(link);
-      } catch (err) {
+      } catch (err: any) {
           console.error("Export error:", err);
-          alert("Error al exportar archivo.");
+          let msg = "Error al exportar archivo.";
+          if (err.response && err.response.data instanceof Blob) {
+               try {
+                   const text = await err.response.data.text();
+                   const json = JSON.parse(text);
+                   if (json.detail) msg = json.detail;
+               } catch (e) { /* ignore */ }
+          }
+          alert(msg);
       }
   };
 
@@ -266,6 +274,9 @@ export default function Breakdown() {
 
                 <div className="flex-grow"></div>
                 <div className="flex space-x-2">
+                    <Button onClick={() => handleExport('csv')} variant="outline" className="text-blue-700 border-blue-200 hover:bg-blue-50">
+                        <Download className="w-4 h-4 mr-2" /> CSV
+                    </Button>
                     <Button onClick={() => handleExport('xlsx')} variant="outline" className="text-green-700 border-green-200 hover:bg-green-50">
                         <Download className="w-4 h-4 mr-2" /> Excel
                     </Button>
