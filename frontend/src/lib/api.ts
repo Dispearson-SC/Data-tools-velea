@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+const baseURL = import.meta.env.VITE_API_URL || 'https://api.farone.cloud';
+console.log('API Base URL configured as:', baseURL);
+
 const api = axios.create({
   // Priority: 1. Env Var, 2. Hardcoded Production Backend, 3. Localhost
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.farone.cloud',
+  baseURL: baseURL,
 });
 
 api.interceptors.request.use((config) => {
