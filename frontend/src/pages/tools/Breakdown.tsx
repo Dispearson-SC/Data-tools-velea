@@ -3,10 +3,13 @@ import { useState, useEffect } from 'react';
 import { Upload, Filter, Table, Pin, Download } from 'lucide-react';
 import api from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import LoadingModal from '../../components/ui/LoadingModal';
 
 export default function Breakdown() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [data, setData] = useState<any>(null);
   
   // Pinned File State
@@ -47,6 +50,8 @@ export default function Breakdown() {
     if (files.length === 0 && !usePinnedFile) return;
     
     setLoading(true);
+    setUploadProgress(0);
+    setLoadingMessage('Procesando análisis de ventas...');
 
     const formData = new FormData();
     
@@ -64,7 +69,17 @@ export default function Breakdown() {
     formData.append('view_mode', viewMode);
 
     try {
-      const response = await api.post('/tools/breakdown', formData);
+      const response = await api.post('/tools/breakdown', formData, {
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+                const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                setUploadProgress(percent);
+                if (percent === 100) {
+                    setLoadingMessage('Calculando desglose... Esto puede tardar unos segundos.');
+                }
+            }
+        }
+      });
       setData(response.data);
     } catch (err: any) {
       console.error(err);
@@ -72,6 +87,7 @@ export default function Breakdown() {
       alert(msg);
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -96,6 +112,10 @@ export default function Breakdown() {
   const handleExport = async (format: 'csv' | 'xlsx') => {
       if (!data) return;
       
+      setLoading(true);
+      setUploadProgress(0);
+      setLoadingMessage(`Generando archivo ${format.toUpperCase()}...`);
+
       const formData = new FormData();
       if (usePinnedFile) formData.append('use_pinned_file', 'true');
       else files.forEach(f => formData.append('files', f));
@@ -110,7 +130,16 @@ export default function Breakdown() {
 
       try {
           const response = await api.post('/tools/breakdown', formData, {
-              responseType: 'blob'
+              responseType: 'blob',
+              onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percent);
+                    if (percent === 100) {
+                        setLoadingMessage('Construyendo archivo para descarga...');
+                    }
+                }
+            }
           });
           
           const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -132,11 +161,20 @@ export default function Breakdown() {
                } catch (e) { /* ignore */ }
           }
           alert(msg);
+      } finally {
+        setLoading(false);
+        setUploadProgress(0);
       }
   };
 
   return (
     <div className="space-y-6">
+      <LoadingModal 
+         isOpen={loading} 
+         message={loadingMessage} 
+         progress={uploadProgress < 100 ? uploadProgress : undefined}
+         isIndeterminate={uploadProgress === 100}
+      />
       <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
         <div className="md:grid md:grid-cols-3 md:gap-6">
           <div className="md:col-span-1">

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Upload, Download, FileSpreadsheet, AlertCircle, X, Search, CheckCircle } from 'lucide-react';
 import api from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import LoadingModal from '../../components/ui/LoadingModal';
 
 interface CleanerProps {
     toolType: 'sales' | 'analysis' | 'production';
@@ -39,6 +40,8 @@ export default function Cleaner({ toolType }: CleanerProps) {
   const [downloadFormat, setDownloadFormat] = useState<'csv' | 'xlsx'>('csv');
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -141,11 +144,18 @@ export default function Cleaner({ toolType }: CleanerProps) {
       }
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
     }
   };
 
   return (
     <div className="space-y-6">
+      <LoadingModal 
+        isOpen={isProcessing} 
+        message={loadingMessage} 
+        progress={uploadProgress < 100 ? uploadProgress : undefined}
+        isIndeterminate={uploadProgress === 100}
+      />
       <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
         <div className="md:grid md:grid-cols-3 md:gap-6">
           <div className="md:col-span-1">
