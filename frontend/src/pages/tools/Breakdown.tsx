@@ -253,7 +253,9 @@ export default function Breakdown() {
                         <Filter className="w-4 h-4" />
                         <span>Sucursales ({selectedSucursales.length || 'Todas'})</span>
                     </button>
-                    <div className="absolute z-10 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-2 max-h-60 overflow-y-auto">
+                    {/* Invisible bridge to prevent menu closing */}
+                    <div className="absolute top-full left-0 w-full h-2 bg-transparent group-hover:block hidden"></div>
+                    <div className="absolute z-10 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-md shadow-lg mt-2 p-2 max-h-60 overflow-y-auto">
                         {data.available_sucursales?.map((s: string) => (
                             <label key={s} className="flex items-center space-x-2 p-1 hover:bg-gray-50 cursor-pointer">
                                 <input 
@@ -274,7 +276,9 @@ export default function Breakdown() {
                         <Filter className="w-4 h-4" />
                         <span>Categorías ({selectedCategory.length || 'Todas'})</span>
                     </button>
-                    <div className="absolute z-10 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-2 max-h-60 overflow-y-auto">
+                    {/* Invisible bridge to prevent menu closing */}
+                    <div className="absolute top-full left-0 w-full h-2 bg-transparent group-hover:block hidden"></div>
+                    <div className="absolute z-10 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-md shadow-lg mt-2 p-2 max-h-60 overflow-y-auto">
                         {['Tamal', 'Bebida', 'Paquete', 'Otro'].map((cat: string) => (
                             <label key={cat} className="flex items-center space-x-2 p-1 hover:bg-gray-50 cursor-pointer">
                                 <input 
@@ -295,7 +299,9 @@ export default function Breakdown() {
                         <Filter className="w-4 h-4" />
                         <span>Productos ({selectedProduct.length || 'Todos'})</span>
                     </button>
-                    <div className="absolute z-10 hidden group-hover:block w-72 bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-2 max-h-80 overflow-y-auto">
+                    {/* Invisible bridge to prevent menu closing */}
+                    <div className="absolute top-full left-0 w-full h-2 bg-transparent group-hover:block hidden"></div>
+                    <div className="absolute z-10 hidden group-hover:block w-72 bg-white border border-gray-200 rounded-md shadow-lg mt-2 p-2 max-h-80 overflow-y-auto">
                         {data.available_products?.map((p: string) => (
                             <label key={p} className="flex items-center space-x-2 p-1 hover:bg-gray-50 cursor-pointer">
                                 <input 
