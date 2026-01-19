@@ -66,9 +66,10 @@ def load_users():
     
     # Ensure admin always exists if DB is empty or corrupt
     admin_username = "gerardoj.suastegui"
+    admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+    
     if admin_username not in users_db:
-        # Default admin password from env or default
-        admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+        # Create new admin
         users_db[admin_username] = {
             "username": admin_username,
             "email": "gerardoj.suastegui@velea.com",
@@ -78,10 +79,31 @@ def load_users():
         }
         save_users()
     else:
-        # Ensure it is admin
+        # Check if admin is valid and update password if needed
+        # Always enforce environment password for safety in deployment
+        is_changed = False
+        
+        # Verify if current stored hash matches the ENV password
+        # This is a bit expensive to check every startup but safe for single admin
+        try:
+             if not pwd_context.verify(admin_pass, users_db[admin_username]["hashed_password"]):
+                 print("Updating admin password from environment variable...")
+                 users_db[admin_username]["hashed_password"] = pwd_context.hash(admin_pass)
+                 is_changed = True
+        except Exception:
+             # If hash is invalid/corrupt, reset it
+             users_db[admin_username]["hashed_password"] = pwd_context.hash(admin_pass)
+             is_changed = True
+
         if not users_db[admin_username].get("is_admin"):
             users_db[admin_username]["is_admin"] = True
+            is_changed = True
+            
+        if users_db[admin_username].get("disabled"):
             users_db[admin_username]["disabled"] = False
+            is_changed = True
+            
+        if is_changed:
             save_users()
 
 def save_users():
