@@ -44,10 +44,11 @@ async def debug_env():
         "SECRET_KEY_SET": bool(os.getenv("SECRET_KEY")),
         "RESEND_API_KEY_SET": bool(os.getenv("RESEND_API_KEY")),
         "ADMIN_PASSWORD_SET": bool(os.getenv("ADMIN_PASSWORD")),
+        "VELEA_ADMIN_PASS_SET": bool(os.getenv("VELEA_ADMIN_PASS")),
         "VITE_API_URL_SET": bool(os.getenv("VITE_API_URL")),
         # Print a few chars to verify values without full exposure
         "SECRET_KEY_PREFIX": os.getenv("SECRET_KEY", "")[:3] + "...",
-        "ADMIN_PASSWORD_PREFIX": os.getenv("ADMIN_PASSWORD", "")[:3] + "..."
+        "ADMIN_PASSWORD_PREFIX": (os.getenv("VELEA_ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or "")[:3] + "..."
     }
 
 @app.get("/")

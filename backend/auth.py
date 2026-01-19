@@ -66,7 +66,8 @@ def load_users():
     
     # Ensure admin always exists if DB is empty or corrupt
     admin_username = "gerardoj.suastegui"
-    admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+    # Try multiple env var names in case of injection issues
+    admin_pass = os.getenv("VELEA_ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or "admin123"
     
     if admin_username not in users_db:
         # Create new admin
