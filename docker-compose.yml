@@ -4,23 +4,22 @@ services:
   backend:
     build: ./backend
     container_name: velea-backend
-    # Ports removed for Dockploy internal routing
-    # Expose only internally if needed, or let Dockploy handle it via network
     expose:
       - "8000"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/users.json:/app/users.json
+      # Persist uploads and user data in named volumes
+      - velea_uploads:/app/uploads
+      - velea_data:/app/data
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - USERS_FILE_PATH=users.json
+      # Point to a file inside the data volume
+      - USERS_FILE_PATH=/app/data/users.json
     restart: always
 
   frontend:
     build: ./frontend
     container_name: velea-frontend
-    # Ports removed to avoid conflict with Dockploy's proxy (Traefik) on port 80
     expose:
       - "80"
     environment:
@@ -28,3 +27,7 @@ services:
     depends_on:
       - backend
     restart: always
+
+volumes:
+  velea_uploads:
+  velea_data:

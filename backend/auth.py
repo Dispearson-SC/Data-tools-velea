@@ -47,6 +47,15 @@ users_db: Dict[str, dict] = {}
 
 def load_users():
     global users_db
+    
+    # Ensure directory exists if it's a path with folders
+    directory = os.path.dirname(USERS_FILE)
+    if directory and not os.path.exists(directory):
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except Exception as e:
+            print(f"Error creating directory for users file: {e}")
+
     if os.path.exists(USERS_FILE):
         try:
             with open(USERS_FILE, "r") as f:
