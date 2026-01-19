@@ -41,28 +41,6 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
-@app.get("/tools/debug-env")
-async def debug_env():
-    # SECURITY WARNING: This endpoint exposes sensitive env vars.
-    # ONLY for debugging connection issues. Remove after fix.
-    
-    # Get all environment keys to check for typos or prefixing issues
-    all_keys = list(os.environ.keys())
-    # Filter only relevant ones or suspicious ones
-    relevant_keys = [k for k in all_keys if "ADMIN" in k or "PASS" in k or "SECRET" in k or "API" in k]
-    
-    return {
-        "ALL_KEYS_DETECTED": relevant_keys,
-        "SECRET_KEY_SET": bool(os.getenv("SECRET_KEY")),
-        "RESEND_API_KEY_SET": bool(os.getenv("RESEND_API_KEY")),
-        "ADMIN_PASSWORD_SET": bool(os.getenv("ADMIN_PASSWORD")),
-        "VELEA_ADMIN_PASS_SET": bool(os.getenv("VELEA_ADMIN_PASS")),
-        "VITE_API_URL_SET": bool(os.getenv("VITE_API_URL")),
-        # Print a few chars to verify values without full exposure
-        "SECRET_KEY_PREFIX": os.getenv("SECRET_KEY", "")[:3] + "...",
-        "ADMIN_PASSWORD_PREFIX": (os.getenv("VELEA_ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or "")[:3] + "..."
-    }
-
 @app.get("/")
 def read_root():
     return {"message": "Velea Limpieza API is running"}
