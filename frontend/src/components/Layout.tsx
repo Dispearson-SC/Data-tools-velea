@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, FileSpreadsheet, Home, Shield } from 'lucide-react';
+import { Menu, X, LogOut, FileSpreadsheet, Home, Shield, Table } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from './ui/Button';
 
@@ -13,6 +13,7 @@ export default function Layout() {
   const navigation = [
     { name: 'Inicio', href: '/', icon: Home },
     { name: 'Limpieza de Archivos', href: '/tools/cleaner', icon: FileSpreadsheet },
+    { name: 'Desglose', href: '/tools/breakdown', icon: Table },
     ...(isAdmin ? [{ name: 'Usuarios', href: '/settings/users', icon: Shield }] : [])
   ];
 

@@ -25,12 +25,12 @@ export default function Analysis() {
     // Check for pinned analysis on mount
     api.get('/tools/pinned-analysis')
       .then(res => {
-        if (res.data) {
-          setData(res.data);
+        if (res.data.data) {
+          setData(res.data.data);
           setIsPinned(true);
           // Try to restore date range if available in data
-          if (res.data.data_range?.min) setStartDate(res.data.data_range.min);
-          if (res.data.data_range?.max) setEndDate(res.data.data_range.max);
+          if (res.data.data.data_range?.min) setStartDate(res.data.data.data_range.min);
+          if (res.data.data.data_range?.max) setEndDate(res.data.data.data_range.max);
         }
       })
       .catch(err => console.error("Error loading pinned analysis:", err));
@@ -45,8 +45,24 @@ export default function Analysis() {
         setIsPinned(false);
         // Optionally clear data? No, keep it visible.
       } else {
-        // Pin
+        // Pin Analysis Data
         await api.post('/tools/pin-analysis', data);
+        
+        // Pin File if available
+        if (files.length > 0) {
+            const formData = new FormData();
+            formData.append('file', files[0]); // Only upload the first file for now as breakdown works better with one source or combined. 
+            // If user uploaded multiple, they are processed in backend but we only pin one "source" usually.
+            // But wait, the analysis combined them.
+            // Ideally we should pin the "raw combined" or just upload the first one.
+            // For simplicity, let's just upload the first one, or if multiple, the backend logic for breakdown handles lists.
+            // But 'upload-pinned-file' endpoint takes 1 file.
+            // Let's assume typical use case is 1 file. If multiple, we might miss some data for breakdown if we only save one.
+            // However, modifying the backend to save multiple pinned files is complex.
+            // Let's stick to uploading the first file for now or warn user.
+            await api.post('/tools/upload-pinned-file', formData);
+        }
+        
         setIsPinned(true);
       }
     } catch (err) {
@@ -257,20 +273,22 @@ export default function Analysis() {
             </div>
 
             {/* KPI Cards */}
+            {data.raw_data_summary && (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <div className="bg-white overflow-hidden shadow rounded-lg px-4 py-5 sm:p-6">
                     <dt className="text-sm font-medium text-gray-500 truncate">Ventas Totales</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">${data.raw_data_summary.total_sales.toLocaleString()}</dd>
+                    <dd className="mt-1 text-3xl font-semibold text-gray-900">${data.raw_data_summary.total_sales?.toLocaleString() || 0}</dd>
                 </div>
                 <div className="bg-white overflow-hidden shadow rounded-lg px-4 py-5 sm:p-6">
                     <dt className="text-sm font-medium text-gray-500 truncate">Productos Vendidos</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{data.raw_data_summary.total_items.toLocaleString()}</dd>
+                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{data.raw_data_summary.total_items?.toLocaleString() || 0}</dd>
                 </div>
                 <div className="bg-white overflow-hidden shadow rounded-lg px-4 py-5 sm:p-6">
                     <dt className="text-sm font-medium text-gray-500 truncate">Transacciones</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{data.raw_data_summary.transaction_count.toLocaleString()}</dd>
+                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{data.raw_data_summary.transaction_count?.toLocaleString() || 0}</dd>
                 </div>
             </div>
+            )}
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

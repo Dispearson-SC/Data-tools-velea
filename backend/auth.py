@@ -12,7 +12,7 @@ import resend
 # CONFIG
 SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura_cambiar_en_prod")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 120 # 2 Hours
 
 # RESEND API KEY
 resend.api_key = os.getenv("RESEND_API_KEY", "")

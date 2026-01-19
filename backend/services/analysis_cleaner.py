@@ -43,6 +43,8 @@ TAMAL_MAPPING = {
     
     # --- Elote ---
     'Tamal Elote': ('Elote', 'Tradicional', 1),
+    'Elote': ('Elote', 'Tradicional', 1),
+    'Tamales Elote 12pz': ('Elote', 'Tradicional', 12),
 
     # --- Bebidas Normalization ---
     'Refresco Vidrio 355ml': ('Refresco Vidrio', '355ml', 1),
