@@ -1,7 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from './ui/Button';
 import { Clock, AlertTriangle } from 'lucide-react';
+
+// Configuration
+// Warning appears after INACTIVITY_LIMIT_MS
+// Token lasts 2 hours, let's warn after 1 hour 59 mins of inactivity? 
+// Or just simple inactivity check (e.g., 15 mins).
+// User asked for: "si no despues de un rato de inactividad"
+// Let's set inactivity limit to 15 minutes for security/UX balance, even if token lasts longer.
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
+const WARNING_DURATION_S = 60; // 60 seconds countdown
 
 export const SessionTimeout = () => {
   const { token, logout } = useAuthStore();
@@ -11,17 +20,26 @@ export const SessionTimeout = () => {
   // Timers references
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Configuration
-  // Warning appears after INACTIVITY_LIMIT_MS
-  // Token lasts 2 hours, let's warn after 1 hour 59 mins of inactivity? 
-  // Or just simple inactivity check (e.g., 15 mins).
-  // User asked for: "si no despues de un rato de inactividad"
-  // Let's set inactivity limit to 15 minutes for security/UX balance, even if token lasts longer.
-  const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
-  const WARNING_DURATION_S = 60; // 60 seconds countdown
 
-  const resetTimers = () => {
+  const handleTimeout = useCallback(() => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    logout();
+    window.location.href = '/login'; // Force redirect
+  }, [logout]);
+
+  const startCountdown = useCallback(() => {
+    countdownTimerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          handleTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [handleTimeout]);
+
+  const resetTimers = useCallback(() => {
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     
@@ -34,25 +52,7 @@ export const SessionTimeout = () => {
             startCountdown();
         }, INACTIVITY_LIMIT_MS);
     }
-  };
-
-  const startCountdown = () => {
-    countdownTimerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleTimeout();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const handleTimeout = () => {
-    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
-    logout();
-    window.location.href = '/login'; // Force redirect
-  };
+  }, [token, startCountdown]);
 
   const handleContinue = () => {
     resetTimers();
@@ -82,7 +82,7 @@ export const SessionTimeout = () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
-  }, [token, showWarning]);
+  }, [token, showWarning, resetTimers]);
 
   if (!showWarning) return null;
 

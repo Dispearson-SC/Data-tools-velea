@@ -88,6 +88,9 @@ async def process_breakdown(
         df = df.loc[mask]
         print(f"DEBUG: After date filter: {df.shape}")
         
+    # Calculate available sucursales BEFORE filtering by sucursal
+    available_sucursales = sorted(df['Sucursal'].unique().tolist())
+
     if sucursales:
         sucursal_list = [s.strip().upper() for s in sucursales]
         if "TODAS" not in sucursal_list:
@@ -98,6 +101,10 @@ async def process_breakdown(
         if "TODAS" not in category_filter and "Todas" not in category_filter:
              df = df[df['Categoria'].isin(category_filter)]
              print(f"DEBUG: After category filter: {df.shape}")
+
+    # Calculate available products BEFORE filtering by product
+    # But AFTER Category/Sucursal filters, so we only show relevant products
+    available_products = sorted(df['Producto_Normalizado'].unique().tolist())
 
     if product_filter:
         df = df[df['Producto_Normalizado'].isin(product_filter)]
@@ -180,9 +187,9 @@ async def process_breakdown(
     # Convert to dict
     data = pivot_df.to_dict(orient='records')
     
-    # Available options for UI
-    available_sucursales = sorted(df['Sucursal'].unique().tolist())
-    available_products = sorted(df['Producto_Normalizado'].unique().tolist())
+    # Available options for UI (calculated earlier)
+    # available_sucursales = sorted(df['Sucursal'].unique().tolist())
+    # available_products = sorted(df['Producto_Normalizado'].unique().tolist())
     
     return {
         "data": data,

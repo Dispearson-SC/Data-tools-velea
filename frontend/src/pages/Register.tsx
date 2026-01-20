@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -12,8 +12,6 @@ export default function Register() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const navigate = useNavigate();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -31,8 +29,9 @@ export default function Register() {
       setSuccess('Registro exitoso. Tu cuenta está pendiente de aprobación por el administrador.');
       // Don't navigate immediately so they see the message
       // setTimeout(() => navigate('/login'), 5000); 
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al registrarse');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Error al registrarse');
     } finally {
       setIsLoading(false);
     }

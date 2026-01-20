@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
-import { Check, X, Shield, ShieldOff, User } from 'lucide-react';
+import { Check, X, Shield, User } from 'lucide-react';
 
 interface UserData {
   username: string;

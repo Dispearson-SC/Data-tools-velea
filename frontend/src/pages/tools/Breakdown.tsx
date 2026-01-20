@@ -10,12 +10,13 @@ export default function Breakdown() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
   
   // Pinned File State
   const [hasPinnedFile, setHasPinnedFile] = useState(false);
   const [usePinnedFile, setUsePinnedFile] = useState(false);
-  const [pinnedFileInfo, setPinnedFileInfo] = useState<any>(null);
+  const [pinnedFileInfo, setPinnedFileInfo] = useState<{ filename: string } | null>(null);
 
   // Filters
   const [startDate, setStartDate] = useState('');
@@ -81,9 +82,10 @@ export default function Breakdown() {
         }
       });
       setData(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      const msg = err.response?.data?.detail || "Error al procesar el desglose.";
+      const error = err as { response?: { data?: { detail?: string } } };
+      const msg = error.response?.data?.detail || "Error al procesar el desglose.";
       alert(msg);
     } finally {
       setLoading(false);
@@ -150,15 +152,16 @@ export default function Breakdown() {
           document.body.appendChild(link);
           link.click();
           link.parentNode?.removeChild(link);
-      } catch (err: any) {
+      } catch (err: unknown) {
           console.error("Export error:", err);
           let msg = "Error al exportar archivo.";
-          if (err.response && err.response.data instanceof Blob) {
+          const error = err as { response?: { data?: Blob } };
+          if (error.response && error.response.data instanceof Blob) {
                try {
-                   const text = await err.response.data.text();
+                   const text = await error.response.data.text();
                    const json = JSON.parse(text);
                    if (json.detail) msg = json.detail;
-               } catch (e) { /* ignore */ }
+               } catch { /* ignore */ }
           }
           alert(msg);
       } finally {
@@ -240,7 +243,7 @@ export default function Breakdown() {
                 </div>
                 <div>
                     <label className="block text-xs font-medium text-gray-500">Agrupar por</label>
-                    <select value={viewMode} onChange={(e: any) => setViewMode(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                    <select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'daily' | 'weekly' | 'monthly')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
                         <option value="daily">Día</option>
                         <option value="weekly">Semana</option>
                         <option value="monthly">Mes</option>
@@ -348,6 +351,7 @@ export default function Breakdown() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {data.data.map((row: any, idx: number) => (
                                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-inherit z-0 shadow-sm">{row.Producto_Normalizado}</td>

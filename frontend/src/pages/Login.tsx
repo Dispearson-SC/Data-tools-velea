@@ -27,8 +27,9 @@ export default function Login() {
       const response = await api.post('/token', formData);
       setToken(response.data.access_token, username);
       navigate('/');
-    } catch (err: any) {
-      if (err.response?.data?.detail === "Inactive user") {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      if (error.response?.data?.detail === "Inactive user") {
          setError('Tu cuenta aún no ha sido activada por el administrador.');
       } else {
          setError('Credenciales incorrectas o error en el servidor.');

@@ -99,6 +99,9 @@ async def data_analysis_endpoint(
             mask = (df['Fecha'] >= start_date) & (df['Fecha'] <= end_date)
             df = df.loc[mask]
 
+        # Calculate available sucursales BEFORE filtering by sucursal
+        available_sucursales = sorted(df['Sucursal'].astype(str).unique().tolist())
+
         # 5.1 Filter by Category (Global)
         if category_filter:
             cat_list = [c.strip() for c in category_filter.split(',')]
@@ -191,7 +194,7 @@ async def data_analysis_endpoint(
                 pt['Cantidad'] = pt['Unidades_Reales']
 
         # Get available sucursales and products for filters
-        available_sucursales = sorted(df['Sucursal'].astype(str).unique().tolist())
+        # available_sucursales = sorted(df['Sucursal'].astype(str).unique().tolist())
         
         # Available products grouped by category
         # List of { name: "...", category: "..." }

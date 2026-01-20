@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Upload, Download, FileSpreadsheet, AlertCircle, X, Search, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Upload, FileSpreadsheet, AlertCircle, X, Search, CheckCircle } from 'lucide-react';
 import api from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import LoadingModal from '../../components/ui/LoadingModal';
@@ -83,6 +83,7 @@ export default function Cleaner({ toolType }: CleanerProps) {
     if (files.length === 0) return;
 
     setIsProcessing(true);
+    setLoadingMessage('Procesando archivos...');
     setError(null);
 
     const formData = new FormData();
@@ -128,11 +129,12 @@ export default function Cleaner({ toolType }: CleanerProps) {
       link.click();
       link.remove();
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      if (err.response?.data instanceof Blob) {
+      const error = err as { response?: { data?: Blob } };
+      if (error.response?.data instanceof Blob) {
          // Read blob error
-         const text = await err.response.data.text();
+         const text = await error.response.data.text();
          try {
              const json = JSON.parse(text);
              setError(json.detail || 'Error al procesar archivos');
