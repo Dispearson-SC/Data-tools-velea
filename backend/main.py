@@ -35,6 +35,33 @@ from analysis_service import data_analysis_endpoint
 
 app = FastAPI(title="Velea Limpieza API")
 
+# --- PLAYWRIGHT INSTALL CHECK ON STARTUP ---
+@app.on_event("startup")
+async def startup_event():
+    """
+    Ensure Playwright browsers are installed.
+    This is critical for deployments where the Dockerfile might be ignored or 
+    buildpacks don't run 'playwright install'.
+    """
+    print("Verifying Playwright browser installation...")
+    try:
+        # Check if we can run a simple browser launch test or just run install
+        # Running 'install chromium' is relatively fast if already installed
+        proc = await asyncio.create_subprocess_exec(
+            "playwright", "install", "chromium",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        
+        if proc.returncode == 0:
+            print("Playwright browsers verified successfully.")
+        else:
+            print(f"Warning: Playwright install returned non-zero exit code: {stderr.decode()}")
+            
+    except Exception as e:
+        print(f"Error checking Playwright browsers: {e}")
+
 # Configuration
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
