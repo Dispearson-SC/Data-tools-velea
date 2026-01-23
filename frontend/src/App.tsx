@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Cleaner from './pages/tools/Cleaner';
 import Analysis from './pages/tools/Analysis';
 import Breakdown from './pages/tools/Breakdown';
+import WansoftDownloader from './pages/tools/WansoftDownloader';
 import AdminUsers from './pages/settings/AdminUsers';
 import { useAuthStore } from './store/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -38,6 +39,7 @@ function App() {
           <Route path="tools/analysis" element={<Cleaner toolType="analysis" />} />
           <Route path="tools/data-analysis" element={<Analysis />} />
           <Route path="tools/breakdown" element={<Breakdown />} />
+          <Route path="tools/wansoft" element={<WansoftDownloader />} />
           <Route path="tools/production" element={<Cleaner toolType="production" />} />
           <Route path="settings/users" element={<AdminUsers />} />
         </Route>

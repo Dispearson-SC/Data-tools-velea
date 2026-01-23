@@ -67,13 +67,17 @@ def leer_archivo_base(file_content: bytes, filename: str):
             content_sample = file_content[:4096]
             sep = ','
             
-            # Try decoding as UTF-8 first
+            # Try decoding as UTF-8 SIG first (handles BOM)
             try:
-                decoded_head = content_sample.decode('utf-8').splitlines()
-                encoding = 'utf-8'
+                decoded_head = content_sample.decode('utf-8-sig').splitlines()
+                encoding = 'utf-8-sig'
             except UnicodeDecodeError:
-                decoded_head = content_sample.decode('latin-1').splitlines()
-                encoding = 'latin-1'
+                try:
+                    decoded_head = content_sample.decode('utf-8').splitlines()
+                    encoding = 'utf-8'
+                except UnicodeDecodeError:
+                    decoded_head = content_sample.decode('latin-1').splitlines()
+                    encoding = 'latin-1'
 
             if any(';' in l for l in decoded_head): sep = ';'
             

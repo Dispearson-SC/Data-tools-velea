@@ -27,35 +27,81 @@ async def data_analysis_endpoint(
             filename = f.filename
             
             # Try to read as DF
-            df_temp = leer_archivo_base(content, filename)
+            try:
+                base = leer_archivo_base(content, filename)
+            except Exception as e:
+                print(f"Error reading file {filename}: {e}")
+                base = None
+            
+            df_check = None
+            
+            if isinstance(base, pd.ExcelFile):
+                try:
+                    df_check = pd.read_excel(base, sheet_name=0)
+                except:
+                    pass
+            elif isinstance(base, pd.DataFrame):
+                df_check = base
             
             is_clean = False
-            if df_temp is not None and not df_temp.empty:
+            if df_check is not None and not df_check.empty:
                 # Check for "Cleaned" signature columns
                 # 'Sucursal', 'Fecha', 'Total_Venta', 'Producto_Final'
-                required_cols = {'SUCURSAL', 'FECHA', 'TOTAL_VENTA', 'PRODUCTO_FINAL'}
+                # Note: We relax the check to allow minor variations or BOM issues
                 
-                # Normalize columns to check (upper case and stripped)
-                cols = {str(c).upper().strip() for c in df_temp.columns}
+                # Normalize columns to check (upper case and stripped of non-alphanumeric if needed)
+                # Helper to normalize
+                def normalize_col(c):
+                    return str(c).upper().strip().replace(' ', '_').replace('.', '')
                 
-                if required_cols.issubset(cols):
+                cols = {normalize_col(c) for c in df_check.columns}
+                
+                # We look for key ingredients
+                has_sucursal = any('SUCURSAL' in c for c in cols)
+                has_fecha = any('FECHA' in c for c in cols)
+                has_total = any('TOTAL_VENTA' in c or 'TOTALVENTA' in c for c in cols)
+                has_prod = any('PRODUCTO_FINAL' in c or 'PRODUCTOFINAL' in c for c in cols)
+                
+                if has_sucursal and has_fecha and has_total and has_prod:
                     is_clean = True
                     # Normalize column names in DF to ensure consistency
-                    df_temp.columns = [str(c).strip() for c in df_temp.columns]
-                    clean_dfs.append(df_temp)
+                    # Map found cols to standard names
+                    new_cols = {}
+                    for c in df_check.columns:
+                        norm = normalize_col(c)
+                        if 'SUCURSAL' in norm: new_cols[c] = 'Sucursal'
+                        elif 'FECHA' in norm: new_cols[c] = 'Fecha'
+                        elif 'TOTAL_VENTA' in norm or 'TOTALVENTA' in norm: new_cols[c] = 'Total_Venta'
+                        elif 'PRODUCTO_FINAL' in norm or 'PRODUCTOFINAL' in norm: new_cols[c] = 'Producto_Final'
+                        elif 'CANTIDAD' in norm: new_cols[c] = 'Cantidad'
+                        elif 'PAQUETE_ORIGEN' in norm or 'PAQUETEORIGEN' in norm: new_cols[c] = 'Paquete_Origen'
+                        else: new_cols[c] = str(c).strip()
+                    
+                    df_check.rename(columns=new_cols, inplace=True)
+                    clean_dfs.append(df_check)
             
             if not is_clean:
+                # If it's a CSV that was read as DF but not "Clean", we need to pass bytes to raw processor
+                # But raw processor expects bytes.
+                # If leer_archivo_base returned a DF for CSV, it means it parsed it.
+                # But process_sales_clean expects (filename, bytes).
+                # So we just pass original content.
                 raw_files_content.append((filename, content))
 
         # 2. Process Raw Files if any
         if raw_files_content:
-            df_processed = await process_sales_clean(raw_files_content)
-            if not df_processed.empty:
-                clean_dfs.append(df_processed)
+            try:
+                df_processed = await process_sales_clean(raw_files_content)
+                if not df_processed.empty:
+                    clean_dfs.append(df_processed)
+            except Exception as e:
+                print(f"Error processing raw files: {e}")
+                # Don't fail immediately, check if we have other data
+                pass
 
         # 3. Combine All Data
         if not clean_dfs:
-            raise HTTPException(status_code=400, detail="No valid data found in files. Ensure files are Sales Reports (Cleaned or Raw).")
+            raise HTTPException(status_code=400, detail="No valid data found in files. Please ensure you are uploading valid Wansoft Sales Reports (Excel or CSV).")
             
         df = pd.concat(clean_dfs, ignore_index=True)
         
@@ -120,6 +166,11 @@ async def data_analysis_endpoint(
         # 7. Grouping Logic (Time)
         df['Fecha'] = pd.to_datetime(df['Fecha'])
         
+        # Calculate Number of Active Days (Days with sales in the filtered data)
+        # This is used for Daily Average calculation
+        active_days = df['Fecha'].nunique()
+        if active_days == 0: active_days = 1
+
         if view_mode == 'weekly':
             df['Periodo'] = df['Fecha'].dt.to_period('W').apply(lambda r: r.start_time.strftime('%Y-%m-%d'))
         elif view_mode == 'monthly':
@@ -152,6 +203,7 @@ async def data_analysis_endpoint(
         # - Unidades Totales (Sum of Unidades_Reales)
         # - Venta Normal (Sum of Unidades_Reales where En_Paquete is False)
         # - Promocion (Sum of Unidades_Reales where En_Paquete is True)
+        # - Promedio Diario (Unidades Totales / Active Days)
         
         # Create helper columns for pivot
         df_products_only['Venta_Normal'] = df_products_only.apply(lambda x: x['Unidades_Reales'] if not x['En_Paquete'] else 0, axis=1)
@@ -164,6 +216,10 @@ async def data_analysis_endpoint(
         }).reset_index()
         
         detailed_stats.rename(columns={'Unidades_Reales': 'Unidades_Totales'}, inplace=True)
+        
+        # Calculate Daily Average (Factor de Venta)
+        detailed_stats['Promedio_Diario'] = (detailed_stats['Unidades_Totales'] / active_days).round(2)
+        
         detailed_stats = detailed_stats.sort_values('Unidades_Totales', ascending=False)
         product_table = detailed_stats.to_dict(orient='records')
         
@@ -215,9 +271,10 @@ async def data_analysis_endpoint(
             "available_products": available_products,
             "data_range": {"min": data_min_date, "max": data_max_date},
             "raw_data_summary": {
-                "total_sales": df['Total_Venta'].sum(),
-                "total_items": df['Unidades_Reales'].sum(), # Use Unidades_Reales here too for total items count accuracy
-                "transaction_count": len(df)
+                "total_sales": float(df['Total_Venta'].sum()),
+                "total_items": float(df['Unidades_Reales'].sum()), 
+                "transaction_count": int(len(df)),
+                "active_days": int(active_days)
             }
         }
 

@@ -23,20 +23,29 @@ async def process_breakdown(
 
     for filename, content in files_content:
         try:
-            df_temp = leer_archivo_base(content, filename)
+            base = leer_archivo_base(content, filename)
+            df_check = None
+            
+            if isinstance(base, pd.ExcelFile):
+                try:
+                    df_check = pd.read_excel(base, sheet_name=0)
+                except:
+                    pass
+            elif isinstance(base, pd.DataFrame):
+                df_check = base
             
             is_clean = False
-            if df_temp is not None and not df_temp.empty:
+            if df_check is not None and not df_check.empty:
                 # Check for "Cleaned" signature columns
                 # 'Sucursal', 'Fecha', 'Total_Venta', 'Producto_Final'
                 required_cols = {'SUCURSAL', 'FECHA', 'TOTAL_VENTA', 'PRODUCTO_FINAL'}
-                cols = {str(c).upper().strip() for c in df_temp.columns}
+                cols = {str(c).upper().strip() for c in df_check.columns}
                 
                 if required_cols.issubset(cols):
                     is_clean = True
                     # Normalize column names in DF to ensure consistency
-                    df_temp.columns = [str(c).strip() for c in df_temp.columns]
-                    clean_dfs.append(df_temp)
+                    df_check.columns = [str(c).strip() for c in df_check.columns]
+                    clean_dfs.append(df_check)
                     print(f"DEBUG: File {filename} detected as CLEANED")
             
             if not is_clean:
