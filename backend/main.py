@@ -482,6 +482,14 @@ async def breakdown_endpoint(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
 
+import uuid
+from fastapi import BackgroundTasks
+
+# --- JOB MANAGER ---
+# Simple in-memory job store
+# Structure: job_id -> { "status": "pending"|"processing"|"completed"|"failed", "message": "...", "progress": 0-100, "result": bytes|None, "filename": str, "media_type": str }
+jobs = {}
+
 # --- WANSOFT DOWNLOADER ---
 class WansoftRequest(BaseModel):
     username: str
@@ -490,37 +498,55 @@ class WansoftRequest(BaseModel):
     end_date: str
     output_type: str # "raw" or "processed"
 
-@app.post("/tools/wansoft-download")
-async def wansoft_download_endpoint(
-    req: WansoftRequest,
-    current_user = Depends(get_current_active_user)
-):
+async def process_wansoft_job(job_id: str, req: WansoftRequest):
     try:
+        jobs[job_id]["status"] = "processing"
+        jobs[job_id]["progress"] = 5
+        jobs[job_id]["message"] = "Iniciando sesión en Wansoft..."
+        
+        # Callback for progress updates
+        def update_progress(msg, percent):
+            jobs[job_id]["message"] = msg
+            jobs[job_id]["progress"] = percent
+
         # 1. Login
-        print(f"Iniciando descarga Wansoft para {req.username}...")
         try:
             cookies = await get_wansoft_session_cookies(req.username, req.password)
         except Exception as login_err:
              print(f"Login failed: {login_err}")
-             raise HTTPException(status_code=400, detail=f"Error de inicio de sesión: {str(login_err)}")
+             jobs[job_id]["status"] = "failed"
+             jobs[job_id]["message"] = f"Error de inicio de sesión: {str(login_err)}"
+             return
         
         # 2. Download
+        jobs[job_id]["message"] = "Descargando reportes..."
+        jobs[job_id]["progress"] = 10
+        
         try:
-            files_content = await download_reports_raw(cookies, req.start_date, req.end_date)
+            files_content = await download_reports_raw(cookies, req.start_date, req.end_date, progress_callback=update_progress)
         except Exception as download_err:
              print(f"Download failed: {download_err}")
-             raise HTTPException(status_code=500, detail=f"Error de descarga: {str(download_err)}")
+             jobs[job_id]["status"] = "failed"
+             jobs[job_id]["message"] = f"Error de descarga: {str(download_err)}"
+             return
         
         if not files_content:
-             raise HTTPException(status_code=404, detail="No se pudieron descargar reportes. Verifica las fechas y permisos.")
+             jobs[job_id]["status"] = "failed"
+             jobs[job_id]["message"] = "No se pudieron descargar reportes. Verifica las fechas y permisos."
+             return
 
+        # 3. Process Result
+        jobs[job_id]["message"] = "Procesando archivos..."
+        jobs[job_id]["progress"] = 95
+        
         if req.output_type == "processed":
             # Use existing cleaning logic
-            print("Procesando archivos descargados...")
             df_result = await process_sales_clean(files_content)
             
             if df_result.empty:
-                raise HTTPException(status_code=400, detail="No valid data found after processing")
+                jobs[job_id]["status"] = "failed"
+                jobs[job_id]["message"] = "No se encontraron datos válidos después de procesar."
+                return
                 
             filename = f"Ventas_Wansoft_Limpias_{req.start_date}_al_{req.end_date}.xlsx"
             output = io.BytesIO()
@@ -528,15 +554,12 @@ async def wansoft_download_endpoint(
                 df_result.to_excel(writer, index=False)
             output.seek(0)
             
-            return StreamingResponse(
-                iter([output.getvalue()]), 
-                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                headers={"Content-Disposition": f"attachment; filename={filename}"}
-            )
+            jobs[job_id]["result"] = output.getvalue()
+            jobs[job_id]["filename"] = filename
+            jobs[job_id]["media_type"] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             
         else: # raw
             # Return ZIP of all files
-            print("Empaquetando archivos crudos...")
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for fname, content in files_content:
@@ -545,18 +568,66 @@ async def wansoft_download_endpoint(
             zip_buffer.seek(0)
             filename = f"Reportes_Crudos_Wansoft_{req.start_date}_al_{req.end_date}.zip"
             
-            return StreamingResponse(
-                iter([zip_buffer.getvalue()]),
-                media_type="application/zip",
-                headers={"Content-Disposition": f"attachment; filename={filename}"}
-            )
+            jobs[job_id]["result"] = zip_buffer.getvalue()
+            jobs[job_id]["filename"] = filename
+            jobs[job_id]["media_type"] = "application/zip"
 
-    except HTTPException as he:
-        raise he
+        jobs[job_id]["status"] = "completed"
+        jobs[job_id]["message"] = "¡Descarga completada!"
+        jobs[job_id]["progress"] = 100
+
     except Exception as e:
-        print(f"Wansoft Error: {e}")
+        print(f"Wansoft Job Error: {e}")
         import traceback
         traceback.print_exc()
-        # In production, do not expose detailed error if it contains sensitive info
-        # But for this user tool, it helps debugging
-        raise HTTPException(status_code=500, detail=str(e))
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["message"] = f"Error inesperado: {str(e)}"
+
+@app.post("/tools/wansoft-download")
+async def start_wansoft_download(
+    req: WansoftRequest,
+    background_tasks: BackgroundTasks,
+    current_user = Depends(get_current_active_user)
+):
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {
+        "status": "pending",
+        "message": "Iniciando...",
+        "progress": 0,
+        "result": None
+    }
+    background_tasks.add_task(process_wansoft_job, job_id, req)
+    return {"job_id": job_id}
+
+@app.get("/tools/wansoft-status/{job_id}")
+async def get_wansoft_status(job_id: str, current_user = Depends(get_current_active_user)):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job = jobs[job_id]
+    return {
+        "status": job["status"],
+        "message": job["message"],
+        "progress": job.get("progress", 0)
+    }
+
+@app.get("/tools/wansoft-result/{job_id}")
+async def get_wansoft_result(job_id: str, current_user = Depends(get_current_active_user)):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job = jobs[job_id]
+    if job["status"] != "completed" or not job.get("result"):
+        raise HTTPException(status_code=400, detail="Result not ready or job failed")
+    
+    # Serve file
+    response = StreamingResponse(
+        iter([job["result"]]), 
+        media_type=job["media_type"]
+    )
+    response.headers["Content-Disposition"] = f"attachment; filename={job['filename']}"
+    
+    # Cleanup (optional, maybe keep it for a bit?)
+    # For now, let's keep it. A cron job would be better for cleanup.
+    
+    return response

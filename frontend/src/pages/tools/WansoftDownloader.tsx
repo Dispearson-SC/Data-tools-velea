@@ -14,10 +14,76 @@ export default function WansoftDownloader() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  // Poll function to check status
+  const pollStatus = async (jobId: string, controller: AbortController) => {
+      if (controller.signal.aborted) return;
+
+      try {
+          const res = await api.get(`/tools/wansoft-status/${jobId}`);
+          const status = res.data;
+          
+          if (controller.signal.aborted) return;
+
+          if (status.status === 'failed') {
+              throw new Error(status.message || 'Error en el proceso');
+          }
+
+          if (status.status === 'completed') {
+              setProgress(100);
+              setLoadingMessage('¡Completado! Descargando archivo...');
+              
+              // Trigger file download
+              const downloadRes = await api.get(`/tools/wansoft-result/${jobId}`, {
+                  responseType: 'blob'
+              });
+              
+              const url = window.URL.createObjectURL(new Blob([downloadRes.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              
+              const contentDisposition = downloadRes.headers['content-disposition'];
+              let filename = `wansoft_result.${outputType === 'processed' ? 'xlsx' : 'zip'}`;
+              
+              if (contentDisposition) {
+                  const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                  if (filenameMatch && filenameMatch.length >= 2) {
+                      filename = filenameMatch[1].replace(/['"]/g, '');
+                  }
+              }
+              
+              link.setAttribute('download', filename);
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              
+              setSuccess(true);
+              setIsProcessing(false);
+              setAbortController(null);
+              return;
+          }
+
+          // Update progress and continue polling
+          setLoadingMessage(status.message || 'Procesando...');
+          setProgress(status.progress || 0);
+          
+          // Poll again in 2 seconds
+          setTimeout(() => pollStatus(jobId, controller), 2000);
+
+      } catch (err: any) {
+          if (!controller.signal.aborted) {
+            console.error(err);
+            setError(err.message || 'Error al consultar estado');
+            setIsProcessing(false);
+            setAbortController(null);
+          }
+      }
+  };
 
   const handleCancel = () => {
     if (abortController) {
@@ -40,70 +106,29 @@ export default function WansoftDownloader() {
     setAbortController(controller);
 
     setIsProcessing(true);
-    setLoadingMessage('Iniciando sesión y descargando reportes (esto puede tardar varios minutos)...');
+    setLoadingMessage('Iniciando sesión...');
+    setProgress(0);
     setError(null);
     setSuccess(false);
 
     try {
-      // Small delay to show message
-      await new Promise(r => setTimeout(r, 500));
-      
-      const response = await api.post('/tools/wansoft-download', {
+      // Start Job
+      const startRes = await api.post('/tools/wansoft-download', {
         username,
         password,
         start_date: startDate,
         end_date: endDate,
         output_type: outputType
-      }, {
-        responseType: 'blob',
-        timeout: 600000, // Increased to 10 minutes (600,000 ms) as requested
-        signal: controller.signal
       });
-
-      // Download logic
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
       
-      // Get filename from header or default
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = `wansoft_result.${outputType === 'processed' ? 'xlsx' : 'zip'}`;
+      const jobId = startRes.data.job_id;
       
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-        if (filenameMatch && filenameMatch.length >= 2) {
-            filename = filenameMatch[1].replace(/['"]/g, '');
-        }
-      }
-      
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setSuccess(true);
+      // Start polling
+      pollStatus(jobId, controller);
       
     } catch (err: unknown) {
-      // If aborted, error is already handled in handleCancel logic mostly, 
-      // but Axios throws CanceledError.
-      if (err instanceof Error && err.name === 'CanceledError') {
-          return; // Already handled by cancel button state update
-      }
-      
       console.error(err);
-      const error = err as { response?: { data?: Blob } };
-      if (error.response?.data instanceof Blob) {
-         const text = await error.response.data.text();
-         try {
-             const json = JSON.parse(text);
-             console.log("Server Error Details:", json); // LOG FOR USER CONSOLE
-             setError(json.detail || 'Error al descargar reportes');
-         } catch {
-             setError('Error al descargar reportes');
-         }
-      } else {
-          setError('Error de conexión o credenciales inválidas. Si la descarga tarda demasiado, verifica tu conexión.');
-      }
-    } finally {
+      setError('Error al iniciar el proceso. Verifica tu conexión.');
       setIsProcessing(false);
       setAbortController(null);
     }
@@ -114,7 +139,8 @@ export default function WansoftDownloader() {
       <LoadingModal 
         isOpen={isProcessing} 
         message={loadingMessage} 
-        isIndeterminate={true}
+        progress={progress}
+        isIndeterminate={false}
         onCancel={handleCancel}
       />
       <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">

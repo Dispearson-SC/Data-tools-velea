@@ -163,6 +163,9 @@ async def process_breakdown(
         # Borrachos
         "Pollo Salsa Verde (Borracho)", "Puerco (Borracho)", "Queso (Borracho)", "Pollo Mole (Borracho)",
         # Bebidas, Extras y Paquetes (Nuevo Orden Solicitado)
+        "Refresco Vidrio (355ml)",
+        "Refresco Lata (355ml)",
+        "Refresco Pet (600ml)",
         "1 tamal borracho + 1 refresco",
         "1 tamal hp  + refresco",
         "5 tamales tradicionales + 1 refresco",
@@ -179,9 +182,7 @@ async def process_breakdown(
         "Medio Ciento",
         "PAN DULCE",
         "Promo 3 Docenas",
-        "Refresco Lata (355ml)",
-        "Refresco Pet (600ml)",
-        "Refresco Vidrio (355ml)",
+        
         "Vallefrut",
         "Vaso de salsa 1/2 litro"
     ]

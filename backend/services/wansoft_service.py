@@ -61,9 +61,10 @@ async def get_wansoft_session_cookies(username, password):
         finally:
             await browser.close()
 
-async def download_reports_raw(cookies, start_date, end_date) -> List[Tuple[str, bytes]]:
+async def download_reports_raw(cookies, start_date, end_date, progress_callback=None) -> List[Tuple[str, bytes]]:
     """
     Descarga los reportes iterando por ID y devuelve una lista de (filename, bytes).
+    progress_callback: function(message, percent)
     """
     print(f"[WANSOFT] Iniciando descarga de reportes {start_date} a {end_date}")
     async with async_playwright() as p:
@@ -74,17 +75,27 @@ async def download_reports_raw(cookies, start_date, end_date) -> List[Tuple[str,
         
         page = await context.new_page()
         # Navegamos a cualquier pagina dentro del dominio para activar cookies antes del fetch
+        if progress_callback: progress_callback("Conectando al servidor de reportes...", 5)
         print("[WANSOFT] Navegando al home para activar cookies...")
         await page.goto(LOGIN_URL) 
         
         downloaded_files = []
         
+        # Calculate total steps for progress
+        total_subs = SUBSIDIARY_END - SUBSIDIARY_START + 1
+        processed_count = 0
+
         for sub_id in range(SUBSIDIARY_START, SUBSIDIARY_END + 1):
+            processed_count += 1
+            current_progress = 10 + int((processed_count / total_subs) * 80) # 10% to 90%
+            
             if sub_id in EXCLUDED_IDS:
                 print(f"[WANSOFT] Skipping ID {sub_id} (Excluido)")
+                if progress_callback: progress_callback(f"Omitiendo sucursal excluida ({sub_id})...", current_progress)
                 continue
                 
             print(f"[WANSOFT] Descargando ID: {sub_id}...")
+            if progress_callback: progress_callback(f"Descargando sucursal ID {sub_id}...", current_progress)
             
             try:
                 # Ejecutar fetch en el contexto del navegador
