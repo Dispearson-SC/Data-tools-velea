@@ -119,6 +119,8 @@ export default function WansoftDownloader() {
         start_date: startDate,
         end_date: endDate,
         output_type: outputType
+      }, {
+        timeout: 1200000 // 20 minutes for the initial handshake if needed, though polling handles the long wait
       });
       
       const jobId = startRes.data.job_id;
