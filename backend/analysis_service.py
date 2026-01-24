@@ -220,7 +220,53 @@ async def data_analysis_endpoint(
         # Calculate Daily Average (Factor de Venta)
         detailed_stats['Promedio_Diario'] = (detailed_stats['Unidades_Totales'] / active_days).round(2)
         
-        detailed_stats = detailed_stats.sort_values('Unidades_Totales', ascending=False)
+        # --- CUSTOM SORTING LOGIC ---
+        priority_order = [
+            # Tradicionales
+            "Puerco (Tradicional)", "Pollo (Tradicional)", "Frijol (Tradicional)", "Queso (Tradicional)", "Dulce (Tradicional)",
+            # Hoja de Plátano
+            "Pollo (Hoja de Platano)", "Puerco (Hoja de Platano)",
+            # Borrachos
+            "Pollo Salsa Verde (Borracho)", "Puerco (Borracho)", "Queso (Borracho)", "Pollo Mole (Borracho)",
+            # Bebidas, Extras y Paquetes
+            "1 tamal borracho + 1 refresco",
+            "1 tamal hp  + refresco",
+            "5 tamales tradicionales + 1 refresco",
+            "Cafe vaso",
+            "Café vaso",
+            "Ciel 1 lto.",
+            "Ciel 600 ml",
+            "Ciento",
+            "Docena Mixta",
+            "EMPANADA CAJETA Y NUEZ",
+            "EMPANADA PIÑA",
+            "Fuze Tea",
+            "Media Docena",
+            "Medio Ciento",
+            "PAN DULCE",
+            "Promo 3 Docenas",
+            "Refresco Lata (355ml)",
+            "Refresco Pet (600ml)",
+            "Refresco Vidrio (355ml)",
+            "Vallefrut",
+            "Vaso de salsa 1/2 litro"
+        ]
+        
+        # Helper to get sort index
+        # We need to handle items not in the list (put them at the end or sort by volume)
+        def get_sort_index(prod_name):
+            if prod_name in priority_order:
+                return priority_order.index(prod_name)
+            if prod_name == "Tamal Elote":
+                return 9999
+            return 1000 # Others
+            
+        detailed_stats['sort_key'] = detailed_stats['Producto_Normalizado'].apply(get_sort_index)
+        
+        # Sort by Key (ASC) then by Unidades_Totales (DESC) for items not in list
+        detailed_stats = detailed_stats.sort_values(['sort_key', 'Unidades_Totales'], ascending=[True, False])
+        detailed_stats = detailed_stats.drop(columns=['sort_key'])
+        
         product_table = detailed_stats.to_dict(orient='records')
         
         # D2. Package Breakdown Table
