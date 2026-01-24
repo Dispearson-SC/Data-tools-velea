@@ -166,25 +166,24 @@ async def process_breakdown(
         "Refresco Vidrio (355ml)",
         "Refresco Lata (355ml)",
         "Refresco Pet (600ml)",
+        "Fuze Tea",
+        "Ciel 600 ml",
+        "Ciel 1 lto.",
+        "Vallefrut",
+        "Cafe vaso",
+        "Café vaso", # Added variant
+        "EMPANADA CAJETA Y NUEZ",
+        "EMPANADA PIÑA",
+        "Vaso de salsa 1/2 litro",
         "1 tamal borracho + 1 refresco",
         "1 tamal hp  + refresco",
         "5 tamales tradicionales + 1 refresco",
-        "Cafe vaso",
-        "Café vaso", # Added variant just in case
-        "Ciel 1 lto.",
-        "Ciel 600 ml",
-        "Ciento",
         "Docena Mixta",
-        "EMPANADA CAJETA Y NUEZ",
-        "EMPANADA PIÑA",
-        "Fuze Tea",
-        "Media Docena",
+        "Ciento",
         "Medio Ciento",
+        "Media Docena",
         "PAN DULCE",
         "Promo 3 Docenas",
-        
-        "Vallefrut",
-        "Vaso de salsa 1/2 litro"
     ]
     
     # Create a categorical type for sorting
