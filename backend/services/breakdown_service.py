@@ -162,18 +162,28 @@ async def process_breakdown(
         "Pollo (Hoja de Platano)", "Puerco (Hoja de Platano)",
         # Borrachos
         "Pollo Salsa Verde (Borracho)", "Puerco (Borracho)", "Queso (Borracho)", "Pollo Mole (Borracho)",
-        # Bebidas y Extras (Nuevo Orden Solicitado)
-        "VIDRIO COCA -SABOR",
-        "LATA PEPSI-SABOR",
-        "COCA /JOYA 600ML",
-        "FUZE TEA",
-        "CIEL 600",
-        "CIEL LT",
-        "VALLE FRUT",
-        "CAFE",
-        "EMPANADA CAJETA",
-        "EMAPANADA PIÑA",
-        "SALSA 1/2 LITRO"
+        # Bebidas, Extras y Paquetes (Nuevo Orden Solicitado)
+        "1 tamal borracho + 1 refresco",
+        "1 tamal hp  + refresco",
+        "5 tamales tradicionales + 1 refresco",
+        "Cafe vaso",
+        "Café vaso", # Added variant just in case
+        "Ciel 1 lto.",
+        "Ciel 600 ml",
+        "Ciento",
+        "Docena Mixta",
+        "EMPANADA CAJETA Y NUEZ",
+        "EMPANADA PIÑA",
+        "Fuze Tea",
+        "Media Docena",
+        "Medio Ciento",
+        "PAN DULCE",
+        "Promo 3 Docenas",
+        "Refresco Lata (355ml)",
+        "Refresco Pet (600ml)",
+        "Refresco Vidrio (355ml)",
+        "Vallefrut",
+        "Vaso de salsa 1/2 litro"
     ]
     
     # Create a categorical type for sorting
