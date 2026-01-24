@@ -17,14 +17,30 @@ export default function WansoftDownloader() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsProcessing(false);
+      setLoadingMessage('');
+      setError('Operación cancelada por el usuario.');
+      setAbortController(null);
+    }
+  };
+
   const handleProcess = async () => {
     if (!username || !password || !startDate || !endDate) {
         setError("Por favor completa todos los campos.");
         return;
     }
 
+    // Create new controller for this request
+    const controller = new AbortController();
+    setAbortController(controller);
+
     setIsProcessing(true);
-    setLoadingMessage('Iniciando sesión en Wansoft...');
+    setLoadingMessage('Iniciando sesión y descargando reportes (esto puede tardar varios minutos)...');
     setError(null);
     setSuccess(false);
 
@@ -32,8 +48,6 @@ export default function WansoftDownloader() {
       // Small delay to show message
       await new Promise(r => setTimeout(r, 500));
       
-      setLoadingMessage('Descargando reportes (esto puede tardar unos minutos)...');
-
       const response = await api.post('/tools/wansoft-download', {
         username,
         password,
@@ -42,7 +56,8 @@ export default function WansoftDownloader() {
         output_type: outputType
       }, {
         responseType: 'blob',
-        timeout: 300000 // 5 minutes timeout for long downloads
+        timeout: 600000, // Increased to 10 minutes (600,000 ms) as requested
+        signal: controller.signal
       });
 
       // Download logic
@@ -68,6 +83,12 @@ export default function WansoftDownloader() {
       setSuccess(true);
       
     } catch (err: unknown) {
+      // If aborted, error is already handled in handleCancel logic mostly, 
+      // but Axios throws CanceledError.
+      if (err instanceof Error && err.name === 'CanceledError') {
+          return; // Already handled by cancel button state update
+      }
+      
       console.error(err);
       const error = err as { response?: { data?: Blob } };
       if (error.response?.data instanceof Blob) {
@@ -80,10 +101,11 @@ export default function WansoftDownloader() {
              setError('Error al descargar reportes');
          }
       } else {
-          setError('Error de conexión o credenciales inválidas');
+          setError('Error de conexión o credenciales inválidas. Si la descarga tarda demasiado, verifica tu conexión.');
       }
     } finally {
       setIsProcessing(false);
+      setAbortController(null);
     }
   };
 
@@ -93,6 +115,7 @@ export default function WansoftDownloader() {
         isOpen={isProcessing} 
         message={loadingMessage} 
         isIndeterminate={true}
+        onCancel={handleCancel}
       />
       <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
         <div className="md:grid md:grid-cols-3 md:gap-6">

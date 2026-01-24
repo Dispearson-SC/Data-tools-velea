@@ -161,7 +161,19 @@ async def process_breakdown(
         # Hoja de Plátano
         "Pollo (Hoja de Platano)", "Puerco (Hoja de Platano)",
         # Borrachos
-        "Pollo Salsa Verde (Borracho)", "Puerco (Borracho)", "Queso (Borracho)", "Pollo Mole (Borracho)"
+        "Pollo Salsa Verde (Borracho)", "Puerco (Borracho)", "Queso (Borracho)", "Pollo Mole (Borracho)",
+        # Bebidas y Extras (Nuevo Orden Solicitado)
+        "VIDRIO COCA -SABOR",
+        "LATA PEPSI-SABOR",
+        "COCA /JOYA 600ML",
+        "FUZE TEA",
+        "CIEL 600",
+        "CIEL LT",
+        "VALLE FRUT",
+        "CAFE",
+        "EMPANADA CAJETA",
+        "EMAPANADA PIÑA",
+        "SALSA 1/2 LITRO"
     ]
     
     # Create a categorical type for sorting

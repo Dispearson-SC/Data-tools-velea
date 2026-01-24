@@ -1,13 +1,15 @@
 import { Loader2 } from 'lucide-react';
+import { Button } from './Button';
 
 interface LoadingModalProps {
   isOpen: boolean;
   message?: string;
   progress?: number; // 0-100
   isIndeterminate?: boolean;
+  onCancel?: () => void;
 }
 
-export default function LoadingModal({ isOpen, message = 'Cargando...', progress, isIndeterminate = true }: LoadingModalProps) {
+export default function LoadingModal({ isOpen, message = 'Cargando...', progress, isIndeterminate = true, onCancel }: LoadingModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -54,6 +56,19 @@ export default function LoadingModal({ isOpen, message = 'Cargando...', progress
                  <span className="font-medium text-gray-600">{Math.round(progress)}%</span>
             )}
         </div>
+
+        {/* Cancel Button */}
+        {onCancel && (
+            <div className="mt-6 w-full flex justify-center">
+                <button
+                    onClick={onCancel}
+                    className="text-red-600 hover:text-red-700 text-sm font-medium hover:underline focus:outline-none"
+                >
+                    Cancelar Operación
+                </button>
+            </div>
+        )}
+
       </div>
       
       {/* CSS for custom shimmer animation if not in Tailwind config */}
